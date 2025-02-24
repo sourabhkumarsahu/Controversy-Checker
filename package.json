@@ -1,7 +1,7 @@
 {
-  "name": "lafda-finder",
+  "name": "controversy-checker",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
@@ -16,7 +16,8 @@
     "googleapis": "^144.0.0",
     "natural": "^8.0.1",
     "puppeteer": "^24.2.1",
-    "sentiment": "^5.0.2"
+    "sentiment": "^5.0.2",
+    "xlsx": "^0.18.5"
   },
   "description": ""
 }
