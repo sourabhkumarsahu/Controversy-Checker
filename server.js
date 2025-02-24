@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -9,7 +10,7 @@ const Sentiment = require('sentiment');
 // Server Configuration
 const config = {
     ports: [3001, 3002, 3003, 3004, 3005],
-    currentDateTime: '2025-02-24 13:42:47',
+    currentDateTime: '2025-02-24 14:41:06',
     currentUser: 'SKSsearchtap'
 };
 
@@ -29,6 +30,7 @@ const corsOptions = {
 // Apply middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Analysis Categories
 const analysisCategories = {
@@ -38,7 +40,6 @@ const analysisCategories = {
         LOW: 'LOW',
         NONE: 'NONE'
     },
-
     CONTROVERSY_TYPES: {
         PERSONAL: 'Personal Conduct',
         PROFESSIONAL: 'Professional Misconduct',
@@ -82,11 +83,9 @@ const utils = {
         date.setDate(date.getDate() - days);
         return date;
     },
-
     formatDate(date) {
         return date.toISOString().split('T')[0];
     },
-
     calculateOverallScore(articles) {
         if (!articles.length) return 0;
 
@@ -137,7 +136,6 @@ const utils = {
 
         return Math.min(100, finalScore);
     },
-
     analyzeContent(text) {
         const sentimentResult = sentiment.analyze(text);
         sentimentResult.comparative = Math.max(-5, Math.min(5, sentimentResult.comparative * 2));
@@ -146,7 +144,7 @@ const utils = {
         const contextScores = this.analyzeContext(tokens, text);
         const intensityScore = this.calculateIntensity(text, sentimentResult);
 
-        const {controversyType, severity} = this.determineControversyTypeAndSeverity(
+        const { controversyType, severity } = this.determineControversyTypeAndSeverity(
             contextScores,
             sentimentResult,
             intensityScore
@@ -162,7 +160,6 @@ const utils = {
             matchedKeywords: this.findMatchedKeywords(text)
         };
     },
-
     analyzeContext(tokens, fullText) {
         const scores = {};
 
@@ -184,7 +181,6 @@ const utils = {
 
         return scores;
     },
-
     analyzeSurroundingContext(tokens, patterns) {
         let contextScore = 0;
         const windowSize = 5;
@@ -204,7 +200,6 @@ const utils = {
 
         return contextScore;
     },
-
     calculateIntensity(text, sentimentResult) {
         const intensifiers = [
             'very', 'extremely', 'severely', 'highly', 'completely',
@@ -220,17 +215,14 @@ const utils = {
         const sentimentIntensity = Math.abs(sentimentResult.comparative);
         return Math.min(5, sentimentIntensity + (intensityCount * 0.5));
     },
-
     checkIntensifiers(words) {
         const intensifiers = ['very', 'extremely', 'severely', 'highly', 'completely'];
         return words.filter(word => intensifiers.includes(word)).length * 0.5;
     },
-
     checkModifiers(words) {
         const negators = ['not', 'never', 'no', 'none', 'neither'];
         return words.filter(word => negators.includes(word)).length * -0.7;
     },
-
     findMatchedKeywords(text) {
         const controversyTerms = [
             'scandal', 'controversy', 'allegation', 'investigation',
@@ -242,12 +234,11 @@ const utils = {
             new RegExp(`\\b${term}\\b`, 'i').test(text)
         );
     },
-
     determineControversyTypeAndSeverity(contextScores, sentimentResult, intensityScore) {
         const maxContext = Object.entries(contextScores)
             .reduce((max, [category, score]) =>
-                    score > max.score ? {category, score} : max,
-                {category: 'none', score: 0}
+                    score > max.score ? { category, score } : max,
+                { category: 'none', score: 0 }
             );
 
         const severityScore = (
@@ -264,9 +255,8 @@ const utils = {
 
         const controversyType = this.mapContextToControversyType(maxContext.category, severityScore);
 
-        return {controversyType, severity};
+        return { controversyType, severity };
     },
-
     mapContextToControversyType(context, score) {
         if (score < 1) return analysisCategories.CONTROVERSY_TYPES.NONE;
 
@@ -296,7 +286,7 @@ const scraper = {
             const page = await browser.newPage();
 
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            await page.setViewport({width: 1280, height: 800});
+            await page.setViewport({ width: 1280, height: 800 });
 
             const searchQuery = `${searchTerm} (controversy OR scandal OR allegations OR investigation)`;
             const encodedQuery = encodeURIComponent(searchQuery);
@@ -357,37 +347,23 @@ const scraper = {
                 }
             }
 
-            const processedArticles = articles.map(article => {
+            return articles.map(article => {
                 const analysis = utils.analyzeContent(article.title);
-                return {
-                    ...article,
-                    ...analysis,
-                    processedAt: new Date().toISOString()
-                };
+                return { ...article, ...analysis, processedAt: new Date().toISOString() };
             });
 
-            console.log(`Processed ${processedArticles.length} articles with analysis`);
-            return processedArticles;
-
         } catch (error) {
-            console.error('Error in googleNews scraper:', error);
             return this.alternativeSearch(searchTerm);
         }
     },
-
     async alternativeSearch(searchTerm) {
         try {
             const encodedQuery = encodeURIComponent(`${searchTerm} controversy news`);
-            const response = await axios.get(
-                `https://news.google.com/rss/search?q=${encodedQuery}&hl=en-US&gl=US&ceid=US:en`,
-                {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                    }
-                }
-            );
+            const response = await axios.get(`https://news.google.com/rss/search?q=${encodedQuery}&hl=en-US&gl=US&ceid=US:en`, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+            });
 
-            const $ = cheerio.load(response.data, {xmlMode: true});
+            const $ = cheerio.load(response.data, { xmlMode: true });
             const items = [];
 
             $('item').each((i, item) => {
@@ -395,26 +371,15 @@ const scraper = {
                 const link = $(item).find('link').text();
                 const pubDate = $(item).find('pubDate').text();
 
-                items.push({
-                    title: title,
-                    link: link,
-                    date: new Date(pubDate).toISOString(),
-                    source: 'Google News (RSS)',
-                    index: i
-                });
+                items.push({ title, link, date: new Date(pubDate).toISOString(), source: 'Google News (RSS)', index: i });
             });
 
             return items.map(article => {
                 const analysis = utils.analyzeContent(article.title);
-                return {
-                    ...article,
-                    ...analysis,
-                    processedAt: new Date().toISOString()
-                };
+                return { ...article, ...analysis, processedAt: new Date().toISOString() };
             });
 
         } catch (error) {
-            console.error('Error in alternative search:', error);
             return [];
         }
     }
@@ -422,7 +387,7 @@ const scraper = {
 
 // API endpoint
 app.post('/api/check-controversy', async (req, res) => {
-    const {name} = req.body;
+    const { name } = req.body;
     console.log(`Received search request for: ${name}`);
 
     if (!name || name.trim().length === 0) {
@@ -445,15 +410,12 @@ app.post('/api/check-controversy', async (req, res) => {
         );
         console.log(`Found ${recentNews.length} recent results`);
 
-        // Enhanced analysis
         const controversyScore = utils.calculateOverallScore(recentNews);
         const hasControversy = controversyScore > 30;
 
-        // Calculate average sentiment
         const avgSentiment = recentNews.reduce((sum, article) =>
             sum + article.sentiment.comparative, 0) / recentNews.length || 0;
 
-        // Group articles by controversy type
         const controversyTypes = recentNews.reduce((acc, article) => {
             if (article.controversyType !== analysisCategories.CONTROVERSY_TYPES.NONE) {
                 acc[article.controversyType] = (acc[article.controversyType] || 0) + 1;
@@ -465,21 +427,15 @@ app.post('/api/check-controversy', async (req, res) => {
             name,
             timestamp: config.currentDateTime,
             user: config.currentUser,
-            searchPeriod: {
-                from: utils.formatDate(thirtyDaysAgo),
-                to: utils.formatDate(new Date())
-            },
+            searchPeriod: { from: utils.formatDate(thirtyDaysAgo), to: utils.formatDate(new Date()) },
             hasControversy,
             controversyScore,
             controversyTypes,
             averageSentiment: avgSentiment,
             results: recentNews.sort((a, b) => {
-                // Sort by severity first, then by sentiment intensity
-                const severityOrder = {HIGH: 3, MEDIUM: 2, LOW: 1, NONE: 0};
+                const severityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1, NONE: 0 };
                 const severityDiff = severityOrder[b.severity] - severityOrder[a.severity];
                 if (severityDiff !== 0) return severityDiff;
-
-                // If same severity, sort by sentiment intensity
                 return Math.abs(b.sentiment.comparative) - Math.abs(a.sentiment.comparative);
             }),
             analysisMetadata: {
@@ -488,8 +444,7 @@ app.post('/api/check-controversy', async (req, res) => {
                     acc[article.severity] = (acc[article.severity] || 0) + 1;
                     return acc;
                 }, {}),
-                averageIntensity: recentNews.reduce((sum, article) =>
-                    sum + article.intensityScore, 0) / recentNews.length || 0,
+                averageIntensity: recentNews.reduce((sum, article) => sum + article.intensityScore, 0) / recentNews.length || 0,
                 searchTimestamp: new Date().toISOString()
             }
         };
@@ -519,67 +474,5 @@ app.get('/health', (req, res) => {
         user: config.currentUser
     });
 });
-
-// Server startup function
-async function startServer() {
-    for (const port of config.ports) {
-        try {
-            await new Promise((resolve, reject) => {
-                const server = app.listen(port, () => {
-                    console.log(`Server running at http://localhost:${port}`);
-                    console.log('Current Date and Time:', config.currentDateTime);
-                    console.log('Current User:', config.currentUser);
-                    resolve();
-                });
-
-                server.on('error', (error) => {
-                    if (error.code === 'EADDRINUSE') {
-                        console.log(`Port ${port} is in use, trying next port...`);
-                        reject(error);
-                    } else {
-                        console.error('Server error:', error);
-                        reject(error);
-                    }
-                });
-            });
-            return port;
-        } catch (error) {
-            if (port === config.ports[config.ports.length - 1]) {
-                throw new Error('All ports are in use. Please free up a port or specify a different port range.');
-            }
-            continue;
-        }
-    }
-}
-
-// Start the server
-startServer()
-    .then(activePort => {
-        console.log(`Server successfully started on port ${activePort}`);
-        const fs = require('fs');
-        const configFile = {
-            apiPort: activePort,
-            startTime: config.currentDateTime,
-            user: config.currentUser
-        };
-        fs.writeFileSync('config.json', JSON.stringify(configFile, null, 2));
-    })
-    .catch(error => {
-        console.error('Failed to start server:', error);
-        process.exit(1);
-    });
-
-// Error handling
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
-});
-
-// Update configuration
-config.currentDateTime = '2025-02-24 13:44:58';
-config.currentUser = 'SKSsearchtap';
 
 module.exports = app;
