@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controversy Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+<div class="container mx-auto px-4">
+    <!-- Header will be inserted here by JavaScript -->
+
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <!-- Search Section -->
+            <div class="mb-6">
+                <input type="text"
+                       id="searchInput"
+                       placeholder="Enter person's name..."
+                       class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+            </div>
+
+            <button id="searchButton"
+                    class="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 text-lg font-semibold">
+                Search
+            </button>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="hidden mt-6">
+                <div class="flex items-center justify-center space-x-3">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span class="text-gray-600">Analyzing controversies...</span>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultContainer" class="hidden mt-6">
+                <!-- Status Message -->
+                <div id="statusMessage" class="text-xl font-semibold text-center mb-6 p-4 rounded-lg"></div>
+
+                <!-- News Container -->
+                <div id="newsContainer" class="space-y-4">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
