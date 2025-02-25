@@ -10,7 +10,7 @@ const fs = require('fs');
 
 // Server Configuration
 const config = {
-    ports: [3001, 3002, 3003, 3004, 3005],
+    ports: [3001],
     currentDateTime: '2025-02-25 11:25:07',
     currentUser: 'SKSsearchtap'
 };
@@ -484,7 +484,7 @@ app.get('/health', (req, res) => {
 // Server startup function
 async function startServer() {
     const port = process.env.PORT || config.ports[0];
-    for (const configuredPort of config.ports) {
+    for (const configuredPort of port) {
         try {
             await new Promise((resolve, reject) => {
                 const server = app.listen(configuredPort, () => {
