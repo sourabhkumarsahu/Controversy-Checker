@@ -1,0 +1,7 @@
+{
+  "build": {
+    "builder": "nodejs",
+    "buildCommand": "npm install",
+    "startCommand": "npm start"
+  }
+}

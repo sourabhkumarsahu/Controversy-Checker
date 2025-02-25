@@ -483,10 +483,10 @@ app.get('/health', (req, res) => {
         user: config.currentUser
     });
 });
+const port = process.env.PORT || 3001;
 
 // Server startup function
 async function startServer() {
-    for (const port of config.ports) {
         try {
             await new Promise((resolve, reject) => {
                 const server = app.listen(port, () => {
@@ -511,9 +511,9 @@ async function startServer() {
             if (port === config.ports[config.ports.length - 1]) {
                 throw new Error('All ports are in use. Please free up a port or specify a different port range.');
             }
-            continue;
+            // continue;
         }
-    }
+
 }
 
 // Start the server
