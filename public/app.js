@@ -84,7 +84,7 @@ class ControversyChecker {
         this.showLoading(true);
 
         try {
-            const response = await fetch(`http://localhost:${this.config.apiPort}/api/check-controversy`, {
+            const response = await fetch(`/api/check-controversy`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
