@@ -2,8 +2,8 @@ class ControversyChecker {
     constructor() {
         // Configuration
         this.config = {
-            currentDateTime: '2025-02-24 13:31:57',
-            currentUser: '',
+            currentDateTime: '2025-02-25 10:15:18',
+            currentUser: 'SKSsearchtap',
             apiPort: 3001
         };
 
@@ -14,6 +14,7 @@ class ControversyChecker {
         this.resultContainer = document.getElementById('resultContainer');
         this.statusMessage = document.getElementById('statusMessage');
         this.newsContainer = document.getElementById('newsContainer');
+        this.footer = document.querySelector('footer');
 
         this.initialize();
         this.bindEvents();
@@ -39,14 +40,13 @@ class ControversyChecker {
         let headerContainer = document.querySelector('.header-container');
         if (!headerContainer) {
             headerContainer = document.createElement('div');
-            headerContainer.className = 'header-container bg-gray-100 p-4 mb-6 rounded-lg';
+            headerContainer.className = 'header-container bg-gray-100 p-4 mb-6 rounded-lg text-center';
 
             // Create header content
             headerContainer.innerHTML = `
-                <div class="flex justify-between items-center">
+                <div class="flex justify-center items-center">
                     <h1 class="text-3xl font-bold text-gray-800">Controversy Checker</h1>
-                   
-            </div>
+                </div>
             `;
 
             // Insert header at the beginning of the main container
@@ -71,7 +71,23 @@ class ControversyChecker {
         this.searchButton.disabled = show;
         if (show) {
             this.resultContainer.classList.add('hidden');
+            this.displayLoadingQuotes();
         }
+    }
+
+    displayLoadingQuotes() {
+        const quotes = [
+            "Searching... We're not saying it's slow, but you might have time to make a sandwich.",
+            "Hold on, we're checking the controversy. Meanwhile, enjoy this completely unrelated message!",
+            "Loading... If it takes too long, blame the slow servers. We're broke!"
+        ];
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        this.loadingIndicator.innerHTML = `
+            <div class="flex items-center justify-center space-x-3">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="text-gray-600">${randomQuote}</span>
+            </div>
+        `;
     }
 
     async performSearch() {
@@ -174,12 +190,10 @@ class ControversyChecker {
             });
 
             this.newsContainer.appendChild(resultsList);
+            this.addExportButton(data, searchTerm); // Add export button if there are results
         } else {
             this.addNoResultsMessage('No news articles found in the specified time period');
         }
-
-        // Add export button
-        this.addExportButton(data, searchTerm);
     }
 
     createResultCard(item, index) {
@@ -256,10 +270,10 @@ class ControversyChecker {
 
     addExportButton(data, searchTerm) {
         const exportButton = document.createElement('button');
-        exportButton.className = 'mt-6 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-200 w-full';
+        exportButton.className = 'fixed bottom-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-200';
         exportButton.textContent = 'Export Results';
         exportButton.onclick = () => this.exportResults(data, searchTerm);
-        this.newsContainer.appendChild(exportButton);
+        document.body.appendChild(exportButton);
     }
 
     exportResults(data, searchTerm) {

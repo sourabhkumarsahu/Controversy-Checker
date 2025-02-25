@@ -3,14 +3,15 @@ const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core'); // Use puppeteer-core to reduce memory usage
 const natural = require('natural');
 const Sentiment = require('sentiment');
+const fs = require('fs');
 
 // Server Configuration
 const config = {
     ports: [3001, 3002, 3003, 3004, 3005],
-    currentDateTime: '2025-02-24 13:42:47',
+    currentDateTime: '2025-02-25 11:25:07',
     currentUser: 'SKSsearchtap'
 };
 
@@ -30,9 +31,6 @@ const corsOptions = {
 // Apply middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serve index.html on the root route
@@ -285,7 +283,8 @@ const scraper = {
     async googleNews(searchTerm) {
         try {
             const browser = await puppeteer.launch({
-                headless: "new",
+                executablePath: process.env.CHROME_BIN || null,
+                headless: true,
                 args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
                 timeout: 30000
             });
@@ -475,7 +474,6 @@ app.post('/api/check-controversy', async (req, res) => {
 });
 
 // Health check endpoint
-// Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
@@ -483,10 +481,10 @@ app.get('/health', (req, res) => {
         user: config.currentUser
     });
 });
-const port = process.env.PORT || 3001;
 
 // Server startup function
 async function startServer() {
+    for (const port of config.ports) {
         try {
             await new Promise((resolve, reject) => {
                 const server = app.listen(port, () => {
@@ -511,16 +509,15 @@ async function startServer() {
             if (port === config.ports[config.ports.length - 1]) {
                 throw new Error('All ports are in use. Please free up a port or specify a different port range.');
             }
-            // continue;
         }
-
+    }
 }
 
+// Start the server
 // Start the server
 startServer()
     .then(activePort => {
         console.log(`Server successfully started on port ${activePort}`);
-        const fs = require('fs');
         const configFile = {
             apiPort: activePort,
             startTime: config.currentDateTime,
@@ -543,7 +540,7 @@ process.on('uncaughtException', (error) => {
 });
 
 // Update configuration
-config.currentDateTime = '2025-02-24 13:44:58';
+config.currentDateTime = '2025-02-25 11:29:15';
 config.currentUser = 'SKSsearchtap';
 
 module.exports = app;
