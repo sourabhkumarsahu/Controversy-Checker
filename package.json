@@ -1,6 +1,7 @@
 {
-  "name": "lafda-finder",
+  "name": "controversy-checker",
   "version": "1.0.0",
+  "description": "A web application to check for controversies related to a person.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -18,6 +19,5 @@
     "puppeteer": "^24.2.1",
     "sentiment": "^5.0.2",
     "xlsx": "^0.18.5"
-  },
-  "description": ""
+  }
 }
