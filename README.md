@@ -30,6 +30,7 @@ You can access the live demo of the application [here](https://controversy-check
     ```sh
     npm start
     ```
+   
 
 4. Open your browser and navigate to `http://localhost:3001`.
 
