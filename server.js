@@ -481,14 +481,14 @@ app.get('/health', (req, res) => {
         user: config.currentUser
     });
 });
-
 // Server startup function
 async function startServer() {
-    for (const port of config.ports) {
+    const port = process.env.PORT || config.ports[0];
+    for (const configuredPort of config.ports) {
         try {
             await new Promise((resolve, reject) => {
-                const server = app.listen(port, () => {
-                    console.log(`Server running at http://localhost:${port}`);
+                const server = app.listen(configuredPort, () => {
+                    console.log(`Server running at http://localhost:${configuredPort}`);
                     console.log('Current Date and Time:', config.currentDateTime);
                     console.log('Current User:', config.currentUser);
                     resolve();
@@ -496,7 +496,7 @@ async function startServer() {
 
                 server.on('error', (error) => {
                     if (error.code === 'EADDRINUSE') {
-                        console.log(`Port ${port} is in use, trying next port...`);
+                        console.log(`Port ${configuredPort} is in use, trying next port...`);
                         reject(error);
                     } else {
                         console.error('Server error:', error);
@@ -504,16 +504,15 @@ async function startServer() {
                     }
                 });
             });
-            return port;
+            return configuredPort;
         } catch (error) {
-            if (port === config.ports[config.ports.length - 1]) {
+            if (configuredPort === config.ports[config.ports.length - 1]) {
                 throw new Error('All ports are in use. Please free up a port or specify a different port range.');
             }
         }
     }
 }
 
-// Start the server
 // Start the server
 startServer()
     .then(activePort => {
