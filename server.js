@@ -482,9 +482,10 @@ app.get('/health', (req, res) => {
     });
 });
 // Server startup function
+// Server startup function
 async function startServer() {
-    const port = process.env.PORT || config.ports[0];
-    for (const configuredPort of port) {
+    const ports = process.env.PORT ? [process.env.PORT] : config.ports;
+    for (const configuredPort of ports) {
         try {
             await new Promise((resolve, reject) => {
                 const server = app.listen(configuredPort, () => {
@@ -506,7 +507,7 @@ async function startServer() {
             });
             return configuredPort;
         } catch (error) {
-            if (configuredPort === config.ports[config.ports.length - 1]) {
+            if (configuredPort === ports[ports.length - 1]) {
                 throw new Error('All ports are in use. Please free up a port or specify a different port range.');
             }
         }
