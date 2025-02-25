@@ -84,6 +84,12 @@ class ControversyChecker {
         this.showLoading(true);
 
         try {
+            // Send search event to Google Analytics
+            gtag('event', 'search', {
+                'event_category': 'engagement',
+                'event_label': searchTerm,
+                'value': 1
+            });
             const response = await fetch(`/api/check-controversy`, {
                 method: 'POST',
                 headers: {
