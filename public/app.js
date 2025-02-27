@@ -168,9 +168,18 @@ class ControversyChecker {
             // Send search event to Google Analytics
             if (typeof gtag === 'function') {
                 gtag('event', 'search', {
-                    'event_category': 'engagement',
-                    'event_label': searchTerm,
-                    'value': 1
+                    // GA4 specific parameter for search terms
+                    'search_term': searchTerm,
+
+                    // Additional custom parameters
+                    'source_count': selectedSources.length,
+                    'sources': selectedSources.join(',')
+                });
+
+                // Also track as a custom event for backward compatibility
+                gtag('event', 'controversy_search', {
+                    'term': searchTerm,
+                    'user': this.config.currentUser
                 });
             }
 
