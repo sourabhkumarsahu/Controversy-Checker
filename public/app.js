@@ -328,8 +328,6 @@ class ControversyChecker {
 
             this.newsContainer.appendChild(resultsListContainer);
 
-            // Add export button if there are results
-            this.addExportButton(data, searchTerm);
         } else {
             this.addNoResultsMessage('No news articles or posts found in the specified time period');
         }
@@ -535,48 +533,6 @@ class ControversyChecker {
         this.newsContainer.innerHTML = '';
     }
 
-    addExportButton(data, searchTerm) {
-        // Remove any existing export button first
-        const existingButton = document.querySelector('#exportButton');
-        if (existingButton) {
-            existingButton.remove();
-        }
-
-        const exportButton = document.createElement('button');
-        exportButton.id = 'exportButton';
-        exportButton.className = 'fixed bottom-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-200 shadow-lg';
-        exportButton.innerHTML = 'Export Results';
-        exportButton.onclick = () => this.exportResults(data, searchTerm);
-        document.body.appendChild(exportButton);
-    }
-
-    exportResults(data, searchTerm) {
-        const exportData = {
-            searchInfo: {
-                term: searchTerm,
-                user: this.config.currentUser,
-                timestamp: this.config.currentDateTime,
-                period: data.searchPeriod
-            },
-            controversyAnalysis: {
-                hasControversy: data.hasControversy,
-                controversyScore: data.controversyScore,
-                controversyTypes: data.controversyTypes,
-                sourceBreakdown: data.sourceBreakdown
-            },
-            results: data.results
-        };
-
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `controversy-check-${searchTerm}-${this.config.currentDateTime.replace(/[: ]/g, '-')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
 }
 
 // Initialize the app when the DOM is loaded
