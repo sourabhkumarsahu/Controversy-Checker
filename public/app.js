@@ -2,7 +2,7 @@ class ControversyChecker {
     constructor() {
         // Configuration
         this.config = {
-            currentDateTime: '2025-02-27 11:35:43',
+            currentDateTime: '2025-02-27 12:21:10',
             currentUser: 'SKSsearchtap',
             apiPort: 3001
         };
@@ -18,6 +18,7 @@ class ControversyChecker {
 
         // Initialize source selectors
         this.sourceSelectors = [];
+        this.results = []; // Store results for sorting
 
         this.initialize();
         this.bindEvents();
@@ -69,18 +70,18 @@ class ControversyChecker {
         sourceSelectionContainer.className = 'my-4 p-4 bg-white rounded-lg shadow';
         sourceSelectionContainer.innerHTML = `
             <h3 class="text-lg font-medium text-gray-800 mb-2">Select data sources:</h3>
-            <div class="flex justify-center space-x-6">
+            <div class="flex flex-wrap gap-4 justify-center">
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" class="source-checkbox form-checkbox h-5 w-5 text-blue-500" value="news" checked>
-                    <span class="text-lg">📰 News</span>
+                    <span>News</span>
                 </label>
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" class="source-checkbox form-checkbox h-5 w-5 text-blue-500" value="reddit" checked>
-                    <span class="text-lg">🔶 Reddit</span>
+                    <span>Reddit</span>
                 </label>
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" class="source-checkbox form-checkbox h-5 w-5 text-blue-500" value="twitter" checked>
-                    <span class="text-lg">🐦 Twitter</span>
+                    <span>Twitter</span>
                 </label>
             </div>
         `;
@@ -204,6 +205,7 @@ class ControversyChecker {
 
     displayResults(searchTerm, data) {
         this.resultContainer.classList.remove('hidden');
+        this.results = data.results || []; // Store results for sorting
 
         // Create analysis summary
         const summarySection = document.createElement('div');
@@ -253,11 +255,10 @@ class ControversyChecker {
             for (const [source, stats] of Object.entries(combinedSourceBreakdown)) {
                 const displayName = this.getDisplayNameForSource(source);
                 const sentimentClass = stats.averageSentiment < 0 ? 'text-red-500' : 'text-green-500';
-                const icon = this.getSourceIconForType(source);
 
                 sourceBreakdownHtml += `
                     <div class="bg-gray-50 p-3 rounded">
-                        <div class="font-semibold">${icon} ${displayName}</div>
+                        <div class="font-semibold">${displayName}</div>
                         <div>Items: ${stats.count}</div>
                         <div class="${sentimentClass}">Sentiment: ${(stats.averageSentiment * 100).toFixed(1)}%</div>
                     </div>
@@ -304,9 +305,19 @@ class ControversyChecker {
         this.newsContainer.appendChild(summarySection);
 
         if (data.results && data.results.length > 0) {
-            // Create tabbed interface for sources
-            const tabbedInterface = this.createTabbedInterface(data.results);
-            this.newsContainer.appendChild(tabbedInterface);
+            // Create sorting control
+            const sortingControl = this.createSortingControl();
+            this.newsContainer.appendChild(sortingControl);
+
+            // Create combined results list
+            const resultsListContainer = document.createElement('div');
+            resultsListContainer.id = 'resultsListContainer';
+            resultsListContainer.className = 'mt-4 space-y-4';
+
+            // Display combined results
+            this.displayCombinedResults(this.results, resultsListContainer);
+
+            this.newsContainer.appendChild(resultsListContainer);
 
             // Add export button if there are results
             this.addExportButton(data, searchTerm);
@@ -315,106 +326,91 @@ class ControversyChecker {
         }
     }
 
-    createTabbedInterface(results) {
+    createSortingControl() {
         const container = document.createElement('div');
-        container.className = 'bg-white rounded-lg shadow overflow-hidden';
+        container.className = 'mt-6 mb-4 bg-white p-4 rounded-lg shadow';
 
-        // Group results by source type for tabs
-        const groupedResults = this.groupResultsBySource(results);
+        container.innerHTML = `
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <label class="font-medium text-gray-700">Sort results by:</label>
+                <select id="resultSorting" class="form-select rounded border border-gray-300 py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="relevant">Most Relevant</option>
+                    <option value="positive">Most Positive First</option>
+                    <option value="negative">Most Negative First</option>
+                    <option value="recent">Most Recent First</option>
+                </select>
+            </div>
+        `;
 
-        // Combine news sources
-        const combinedGroupedResults = {...groupedResults};
-        if (combinedGroupedResults.googleNews || combinedGroupedResults.additionalNews) {
-            combinedGroupedResults.news = [
-                ...(combinedGroupedResults.googleNews || []),
-                ...(combinedGroupedResults.additionalNews || [])
-            ];
-            delete combinedGroupedResults.googleNews;
-            delete combinedGroupedResults.additionalNews;
-        }
-
-        // Extract source types and prepare tabs
-        const sourceTabs = Object.keys(combinedGroupedResults);
-
-        if (sourceTabs.length === 0) {
-            return container;
-        }
-
-        // Create tab navigation
-        const tabsNav = document.createElement('div');
-        tabsNav.className = 'flex border-b border-gray-200';
-
-        // Create content container
-        const tabContents = document.createElement('div');
-        tabContents.className = 'p-4';
-
-        sourceTabs.forEach((sourceType, index) => {
-            const displayName = this.getDisplayNameForSource(sourceType);
-            const icon = this.getSourceIconForType(sourceType);
-            const count = combinedGroupedResults[sourceType].length;
-
-            // Create tab button
-            const tabButton = document.createElement('button');
-            tabButton.className = `flex-1 py-3 px-4 text-center focus:outline-none ${
-                index === 0 ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-            }`;
-            tabButton.dataset.tab = sourceType;
-            tabButton.innerHTML = `
-                <span class="font-medium">${icon} ${displayName}</span>
-                <span class="ml-1 text-sm">(${count})</span>
-            `;
-
-            // Create tab content
-            const tabContent = document.createElement('div');
-            tabContent.className = `tab-content ${index === 0 ? '' : 'hidden'}`;
-            tabContent.dataset.content = sourceType;
-
-            // Add results to tab content
-            const items = combinedGroupedResults[sourceType];
-            const resultsList = document.createElement('div');
-            resultsList.className = 'space-y-3';
-
-            items.forEach((item, idx) => {
-                const resultCard = this.createResultCard(item, idx + 1);
-                resultsList.appendChild(resultCard);
-            });
-
-            tabContent.appendChild(resultsList);
-            tabContents.appendChild(tabContent);
-
-            // Add tab click event
-            tabButton.addEventListener('click', () => {
-                // Update tab button styles
-                document.querySelectorAll('[data-tab]').forEach(btn => {
-                    btn.classList.remove('bg-blue-500', 'text-white');
-                    btn.classList.add('bg-gray-100', 'hover:bg-gray-200');
+        // Add event listener after the container is added to the DOM
+        setTimeout(() => {
+            const selectElement = document.getElementById('resultSorting');
+            if (selectElement) {
+                selectElement.addEventListener('change', () => {
+                    this.sortAndDisplayResults(selectElement.value);
                 });
-                tabButton.classList.remove('bg-gray-100', 'hover:bg-gray-200');
-                tabButton.classList.add('bg-blue-500', 'text-white');
-
-                // Show/hide tab content
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.add('hidden');
-                });
-                document.querySelector(`[data-content="${sourceType}"]`).classList.remove('hidden');
-            });
-
-            tabsNav.appendChild(tabButton);
-        });
-
-        container.appendChild(tabsNav);
-        container.appendChild(tabContents);
+            }
+        }, 0);
 
         return container;
     }
 
-    groupResultsBySource(results) {
-        return results.reduce((acc, item) => {
-            const sourceType = item.sourceType || 'unknown';
-            if (!acc[sourceType]) acc[sourceType] = [];
-            acc[sourceType].push(item);
-            return acc;
-        }, {});
+    sortAndDisplayResults(sortType) {
+        const resultsListContainer = document.getElementById('resultsListContainer');
+        if (!resultsListContainer || !this.results || this.results.length === 0) return;
+
+        let sortedResults = [...this.results];
+
+        switch (sortType) {
+            case 'positive':
+                sortedResults.sort((a, b) => {
+                    const sentimentA = a.sentiment?.comparative || 0;
+                    const sentimentB = b.sentiment?.comparative || 0;
+                    return sentimentB - sentimentA;
+                });
+                break;
+
+            case 'negative':
+                sortedResults.sort((a, b) => {
+                    const sentimentA = a.sentiment?.comparative || 0;
+                    const sentimentB = b.sentiment?.comparative || 0;
+                    return sentimentA - sentimentB;
+                });
+                break;
+
+            case 'recent':
+                sortedResults.sort((a, b) => {
+                    return new Date(b.date) - new Date(a.date);
+                });
+                break;
+
+            default:
+                // Keep original order (most relevant)
+                break;
+        }
+
+        // Display the sorted results
+        this.displayCombinedResults(sortedResults, resultsListContainer);
+    }
+
+    displayCombinedResults(results, container) {
+        container.innerHTML = ''; // Clear container
+
+        if (results.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 p-4">No results found</div>';
+            return;
+        }
+
+        // Create results list
+        const resultsList = document.createElement('div');
+        resultsList.className = 'space-y-4';
+
+        results.forEach((item, index) => {
+            const resultCard = this.createResultCard(item, index + 1);
+            resultsList.appendChild(resultCard);
+        });
+
+        container.appendChild(resultsList);
     }
 
     getDisplayNameForSource(source) {
@@ -428,19 +424,6 @@ class ControversyChecker {
         };
 
         return sourceNames[source] || source;
-    }
-
-    getSourceIconForType(sourceType) {
-        const icons = {
-            googleNews: '📰',
-            news: '📰',
-            additionalNews: '📰',
-            reddit: '🔶',
-            twitter: '🐦',
-            unknown: '🔍'
-        };
-
-        return icons[sourceType] || '🔍';
     }
 
     createResultCard(item, index) {
@@ -475,11 +458,17 @@ class ControversyChecker {
             `;
         }
 
-        const sourceBadgeClass = this.getSourceBadgeClass(item.sourceType);
-        const sourceDetail = item.sourceDetail || this.getDisplayNameForSource(item.sourceType);
+        // Determine source type for badge
+        let sourceType = item.sourceType;
+        if (sourceType === 'googleNews' || sourceType === 'additionalNews') {
+            sourceType = 'news';
+        }
+
+        const sourceBadgeClass = this.getSourceBadgeClass(sourceType);
+        const sourceDetail = item.sourceDetail || this.getDisplayNameForSource(sourceType);
         const sourceBadge = `
-            <span class="px-2 py-0.5 text-xs rounded ${sourceBadgeClass}">
-                ${sourceDetail}
+            <span class="px-2 py-1 text-xs rounded ${sourceBadgeClass}">
+                ${this.getDisplayNameForSource(sourceType)}
             </span>
         `;
 
@@ -509,11 +498,6 @@ class ControversyChecker {
     }
 
     getSourceBadgeClass(sourceType) {
-        // Map googleNews and additionalNews to same style as news
-        if (sourceType === 'googleNews' || sourceType === 'additionalNews') {
-            sourceType = 'news';
-        }
-
         const badgeClasses = {
             news: 'bg-blue-100 text-blue-800',
             reddit: 'bg-orange-100 text-orange-800',
@@ -547,7 +531,7 @@ class ControversyChecker {
         const exportButton = document.createElement('button');
         exportButton.id = 'exportButton';
         exportButton.className = 'fixed bottom-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-200 shadow-lg';
-        exportButton.innerHTML = `<span class="mr-1">📥</span> Export Results`;
+        exportButton.innerHTML = 'Export Results';
         exportButton.onclick = () => this.exportResults(data, searchTerm);
         document.body.appendChild(exportButton);
     }
