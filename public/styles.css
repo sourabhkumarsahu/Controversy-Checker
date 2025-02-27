@@ -1,0 +1,45 @@
+/* Add to your public folder */
+.tab-content {
+    max-height: 70vh;  /* Limit tab content height */
+    overflow-y: auto;  /* Enable scrolling within tabs */
+    scrollbar-width: thin;
+    padding: 5px;
+}
+
+.tab-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tab-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 3px;
+}
+
+.tab-content::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+}
+
+/* Smooth tab transitions */
+.tab-content {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.tab-content.hidden {
+    display: none;
+    opacity: 0;
+}
+
+/* Improved cards */
+.shadow {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.shadow:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+}

@@ -3,21 +3,32 @@ const path = require('path');
 const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const puppeteer = require('puppeteer-core'); // Use puppeteer-core to reduce memory usage
+const puppeteer = require('puppeteer-core');
 const natural = require('natural');
 const Sentiment = require('sentiment');
 const fs = require('fs');
+const xml2js = require('xml2js');
+
+// Import the new scrapers
+const RedditScraper = require('./services/redditScraper');
+const NitterScraper = require('./services/nitterScraper');
+const NewsCollector = require('./services/newsCollector');
 
 // Server Configuration
 const config = {
     ports: [3001],
-    currentDateTime: '2025-02-25 11:25:07',
+    currentDateTime: '2025-02-27 10:38:30',
     currentUser: 'SKSsearchtap'
 };
 
 const app = express();
 const sentiment = new Sentiment();
 const tokenizer = new natural.WordTokenizer();
+
+// Initialize the new scrapers
+const redditScraper = new RedditScraper();
+const nitterScraper = new NitterScraper();
+const newsCollector = new NewsCollector();
 
 // CORS Configuration
 const corsOptions = {
@@ -40,6 +51,7 @@ app.get('/', (req, res) => {
 
 // Analysis Categories
 const analysisCategories = {
+    // Your existing categories
     SEVERITY_LEVELS: {
         HIGH: 'HIGH',
         MEDIUM: 'MEDIUM',
@@ -60,6 +72,7 @@ const analysisCategories = {
 
 // Context patterns
 const contextPatterns = {
+    // Your existing patterns
     legal: {
         patterns: ['lawsuit', 'court', 'legal', 'judge', 'trial', 'charged', 'alleged', 'criminal', 'police'],
         weight: 2.0
@@ -84,6 +97,7 @@ const contextPatterns = {
 
 // Utility functions
 const utils = {
+    // Your existing utility functions
     getDateXDaysAgo(days) {
         const date = new Date();
         date.setDate(date.getDate() - days);
@@ -132,13 +146,6 @@ const utils = {
         const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
         const articleCountMultiplier = Math.min(1, articles.length / 5);
         const finalScore = Math.round(averageScore * articleCountMultiplier);
-
-        console.log('Score Calculation:', {
-            articles: articles.length,
-            averageScore,
-            articleCountMultiplier,
-            finalScore
-        });
 
         return Math.min(100, finalScore);
     },
@@ -280,6 +287,7 @@ const utils = {
 
 // Scraping function
 const scraper = {
+    // Your existing Google News scraper
     async googleNews(searchTerm) {
         try {
             const browser = await puppeteer.launch({
@@ -360,6 +368,7 @@ const scraper = {
             });
 
         } catch (error) {
+            console.error('Error in Google News scraping:', error);
             return this.alternativeSearch(searchTerm);
         }
     },
@@ -387,14 +396,155 @@ const scraper = {
             });
 
         } catch (error) {
+            console.error('Error in alternative search:', error);
             return [];
         }
+    },
+
+    // Method to gather data from all sources with improved error handling
+    async gatherFromAllSources(searchTerm, sources = ['googleNews', 'news', 'reddit', 'twitter']) {
+        console.log(`Gathering data from sources: ${sources.join(', ')} for term: ${searchTerm}`);
+
+        // Ensure correct source handling
+        // If 'news' is specified, include both Google News and additional news
+        const expandedSources = [...sources];
+        if (sources.includes('news') && !sources.includes('googleNews')) {
+            expandedSources.push('googleNews');
+        }
+        if (sources.includes('news') && !sources.includes('additionalNews')) {
+            expandedSources.push('additionalNews');
+        }
+
+        console.log(`Expanded sources: ${expandedSources.join(', ')}`);
+
+        const allResults = [];
+        const promises = [];
+        const sourcesAvailability = {};
+
+        if (expandedSources.includes('googleNews')) {
+            promises.push(
+                this.googleNews(searchTerm)
+                    .then(items => {
+                        console.log(`Got ${items.length} Google News items`);
+                        items.forEach(item => {
+                            item.sourceType = 'googleNews';
+                            item.sourceDetail = item.source || 'Google News';
+                        });
+                        allResults.push(...items);
+                        sourcesAvailability.googleNews = items.length;
+                    })
+                    .catch(err => {
+                        console.error('Error fetching from Google News:', err.message);
+                        sourcesAvailability.googleNews = 0;
+                    })
+            );
+        }
+
+        if (expandedSources.includes('additionalNews') || expandedSources.includes('news')) {
+            promises.push(
+                newsCollector.getNews(searchTerm)
+                    .then(items => {
+                        const analyzedItems = items.map(item => {
+                            const analysis = utils.analyzeContent(item.title);
+                            return {
+                                ...item,
+                                ...analysis,
+                                sourceType: 'additionalNews',
+                                processedAt: new Date().toISOString()
+                            };
+                        });
+                        console.log(`Got ${analyzedItems.length} additional news items`);
+                        allResults.push(...analyzedItems);
+                        sourcesAvailability.additionalNews = analyzedItems.length;
+                    })
+                    .catch(err => {
+                        console.error('Error fetching from additional news:', err.message);
+                        sourcesAvailability.additionalNews = 0;
+                    })
+            );
+        }
+
+        if (expandedSources.includes('reddit')) {
+            promises.push(
+                redditScraper.searchTopic(searchTerm)
+                    .then(items => {
+                        const analyzedItems = items.map(item => {
+                            const analysis = utils.analyzeContent(item.title);
+                            return {
+                                ...item,
+                                ...analysis,
+                                sourceType: 'reddit',
+                                processedAt: new Date().toISOString()
+                            };
+                        });
+                        console.log(`Got ${analyzedItems.length} Reddit items`);
+                        allResults.push(...analyzedItems);
+                        sourcesAvailability.reddit = analyzedItems.length;
+                    })
+                    .catch(err => {
+                        console.error('Error fetching from Reddit:', err.message);
+                        sourcesAvailability.reddit = 0;
+                    })
+            );
+        }
+
+        if (expandedSources.includes('twitter')) {
+            promises.push(
+                nitterScraper.searchTopic(searchTerm)
+                    .then(items => {
+                        const analyzedItems = items.map(item => {
+                            const analysis = utils.analyzeContent(item.content || item.title);
+                            return {
+                                ...item,
+                                ...analysis,
+                                sourceType: 'twitter',
+                                processedAt: new Date().toISOString()
+                            };
+                        });
+                        console.log(`Got ${analyzedItems.length} Twitter items`);
+                        allResults.push(...analyzedItems);
+                        sourcesAvailability.twitter = analyzedItems.length;
+                    })
+                    .catch(err => {
+                        console.error('Error fetching from Twitter:', err.message);
+                        sourcesAvailability.twitter = 0;
+                    })
+            );
+        }
+
+        // Wait for all data gathering to complete, even if some fail
+        await Promise.allSettled(promises);
+        console.log(`Total items gathered from all sources: ${allResults.length}`);
+        console.log('Sources availability:', sourcesAvailability);
+
+        // Update config timestamps
+        config.currentDateTime = '2025-02-27 11:41:09';
+        config.currentUser = 'SKSsearchtap';
+
+        // Apply additional processing or filtering if needed
+        const processedResults = allResults.map(item => {
+            // Ensure all items have necessary fields
+            return {
+                ...item,
+                date: item.date || new Date().toISOString(),
+                severity: item.severity || 'NONE',
+                title: item.title || 'Untitled Content',
+                link: item.link || '#',
+                content: item.content || item.title || '',
+                sourceType: item.sourceType || 'unknown'
+            };
+        });
+
+        // Sort by date (most recent first)
+        processedResults.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return processedResults;
     }
 };
 
-// API endpoint
+// Updated API endpoint to support multiple sources
 app.post('/api/check-controversy', async (req, res) => {
-    const { name } = req.body;
+    const { name, sources } = req.body;
     console.log(`Received search request for: ${name}`);
 
     if (!name || name.trim().length === 0) {
@@ -405,30 +555,52 @@ app.post('/api/check-controversy', async (req, res) => {
         });
     }
 
+    // Use provided sources or default to all
+    const sourcesToCheck = sources || ['googleNews', 'news', 'reddit', 'twitter'];
     const thirtyDaysAgo = utils.getDateXDaysAgo(30);
 
     try {
-        console.log(`Starting news search for ${name}...`);
-        const newsResults = await scraper.googleNews(name);
-        console.log(`Found ${newsResults.length} total results`);
+        console.log(`Starting multi-source search for ${name}...`);
+        const allResults = await scraper.gatherFromAllSources(name, sourcesToCheck);
+        console.log(`Found ${allResults.length} total results across all sources`);
 
-        const recentNews = newsResults.filter(item =>
+        const recentResults = allResults.filter(item =>
             new Date(item.date) >= thirtyDaysAgo
         );
-        console.log(`Found ${recentNews.length} recent results`);
+        console.log(`Found ${recentResults.length} recent results`);
 
-        const controversyScore = utils.calculateOverallScore(recentNews);
+        const controversyScore = utils.calculateOverallScore(recentResults);
         const hasControversy = controversyScore > 30;
 
-        const avgSentiment = recentNews.reduce((sum, article) =>
-            sum + article.sentiment.comparative, 0) / recentNews.length || 0;
+        const avgSentiment = recentResults.length > 0 ?
+            recentResults.reduce((sum, article) => sum + article.sentiment.comparative, 0) / recentResults.length : 0;
 
-        const controversyTypes = recentNews.reduce((acc, article) => {
+        const controversyTypes = recentResults.reduce((acc, article) => {
             if (article.controversyType !== analysisCategories.CONTROVERSY_TYPES.NONE) {
                 acc[article.controversyType] = (acc[article.controversyType] || 0) + 1;
             }
             return acc;
         }, {});
+
+        // Group results by source for analytics
+        const resultsBySource = recentResults.reduce((acc, item) => {
+            const sourceType = item.sourceType || 'unknown';
+            if (!acc[sourceType]) acc[sourceType] = [];
+            acc[sourceType].push(item);
+            return acc;
+        }, {});
+
+        const sourceStats = {};
+        for (const [source, items] of Object.entries(resultsBySource)) {
+            sourceStats[source] = {
+                count: items.length,
+                averageSentiment: items.reduce((sum, item) => sum + item.sentiment.comparative, 0) / items.length,
+                severityCounts: items.reduce((acc, item) => {
+                    acc[item.severity] = (acc[item.severity] || 0) + 1;
+                    return acc;
+                }, {})
+            };
+        }
 
         const response = {
             name,
@@ -439,19 +611,21 @@ app.post('/api/check-controversy', async (req, res) => {
             controversyScore,
             controversyTypes,
             averageSentiment: avgSentiment,
-            results: recentNews.sort((a, b) => {
+            sourceBreakdown: sourceStats,
+            results: recentResults.sort((a, b) => {
                 const severityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1, NONE: 0 };
                 const severityDiff = severityOrder[b.severity] - severityOrder[a.severity];
                 if (severityDiff !== 0) return severityDiff;
                 return Math.abs(b.sentiment.comparative) - Math.abs(a.sentiment.comparative);
             }),
             analysisMetadata: {
-                totalArticles: recentNews.length,
-                severityCounts: recentNews.reduce((acc, article) => {
+                totalArticles: recentResults.length,
+                sourcesChecked: sourcesToCheck,
+                severityCounts: recentResults.reduce((acc, article) => {
                     acc[article.severity] = (acc[article.severity] || 0) + 1;
                     return acc;
                 }, {}),
-                averageIntensity: recentNews.reduce((sum, article) => sum + article.intensityScore, 0) / recentNews.length || 0,
+                averageIntensity: recentResults.reduce((sum, article) => sum + article.intensityScore, 0) / recentResults.length || 0,
                 searchTimestamp: new Date().toISOString()
             }
         };
@@ -481,7 +655,61 @@ app.get('/health', (req, res) => {
         user: config.currentUser
     });
 });
-// Server startup function
+
+// New endpoint for advanced controversy checking with source selection
+app.post('/api/check-controversy/advanced', async (req, res) => {
+    const { name, sources } = req.body;
+    console.log(`Received advanced search request for: ${name} with sources: ${sources}`);
+
+    if (!name || name.trim().length === 0) {
+        return res.status(400).json({
+            error: 'Name is required',
+            timestamp: config.currentDateTime,
+            user: config.currentUser
+        });
+    }
+
+    try {
+        // Default to all sources if none specified
+        const sourcesToCheck = Array.isArray(sources) && sources.length > 0 ?
+            sources : ['googleNews', 'news', 'reddit', 'twitter'];
+
+        const allResults = await scraper.gatherFromAllSources(name, sourcesToCheck);
+
+        // Use the same processing logic as the main endpoint
+        const thirtyDaysAgo = utils.getDateXDaysAgo(30);
+
+        const recentResults = allResults.filter(item =>
+            new Date(item.date) >= thirtyDaysAgo
+        );
+
+        const controversyScore = utils.calculateOverallScore(recentResults);
+        const hasControversy = controversyScore > 30;
+
+        res.json({
+            name,
+            timestamp: config.currentDateTime,
+            user: config.currentUser,
+            sourcesChecked: sourcesToCheck,
+            hasControversy,
+            controversyScore,
+            totalResults: recentResults.length,
+            results: recentResults.sort((a, b) => {
+                const severityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1, NONE: 0 };
+                return severityOrder[b.severity] - severityOrder[a.severity];
+            })
+        });
+    } catch (error) {
+        console.error('Error in advanced controversy check:', error);
+        res.status(500).json({
+            error: 'Failed to fetch results',
+            details: error.message,
+            timestamp: config.currentDateTime,
+            user: config.currentUser
+        });
+    }
+});
+
 // Server startup function
 async function startServer() {
     const ports = process.env.PORT ? [process.env.PORT] : config.ports;
@@ -540,7 +768,7 @@ process.on('uncaughtException', (error) => {
 });
 
 // Update configuration
-config.currentDateTime = '2025-02-25 11:29:15';
+config.currentDateTime = '2025-02-27 10:51:58';
 config.currentUser = 'SKSsearchtap';
 
 module.exports = app;
