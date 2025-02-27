@@ -482,30 +482,35 @@ class ControversyChecker {
         `;
 
         card.innerHTML = `
-            <div class="flex items-start space-x-3">
-                <div class="flex-shrink-0 w-7 h-7 ${
+    <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0 w-7 h-7 ${
             severity !== 'NONE' ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-500'
         } rounded-full flex items-center justify-center font-semibold text-sm">
-                    ${index}
+            ${index}
+        </div>
+        <div class="flex-grow">
+            <a href="${this.fixRedditLinks(item.link)}" target="_blank" class="block">
+                <h4 class="font-medium text-gray-900 hover:text-blue-600">${item.title}</h4>
+                <div class="flex flex-wrap items-center text-sm text-gray-500 mt-1 gap-2">
+                    <span>${date}</span>
+                    <span>•</span>
+                    <span>Severity: ${severity}</span>
+                    ${sourceBadge}
                 </div>
-                <div class="flex-grow">
-                    <a href="${item.link}" target="_blank" class="block">
-                        <h4 class="font-medium text-gray-900 hover:text-blue-600">${item.title}</h4>
-                        <div class="flex flex-wrap items-center text-sm text-gray-500 mt-1 gap-2">
-                            <span>${date}</span>
-                            <span>•</span>
-                            <span>Severity: ${severity}</span>
-                            ${sourceBadge}
-                        </div>
-                        ${sentimentHtml}
-                    </a>
-                </div>
-            </div>
-        `;
+                ${sentimentHtml}
+            </a>
+        </div>
+    </div>
+`;
 
         return card;
     }
-
+    fixRedditLinks(url) {
+        if (typeof url === 'string' && url.includes('old.reddit.com')) {
+            return url.replace('old.reddit.com', 'reddit.com');
+        }
+        return url;
+    }
     getSourceBadgeClass(sourceType) {
         const badgeClasses = {
             news: 'bg-blue-100 text-blue-800',
