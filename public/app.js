@@ -278,23 +278,113 @@ class ControversyChecker {
         }
 
         summarySection.innerHTML = `
-            <div class="text-center">
-                <div class="text-2xl font-bold ${scoreColorClass} mb-4">
-                    Controversy Score: ${controversyScore}%
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div class="bg-gray-50 p-3 rounded">
-                        <div class="font-semibold">Analysis Period</div>
-                        <div>${data.searchPeriod.from} to ${data.searchPeriod.to}</div>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <div class="font-semibold">Total Items</div>
-                        <div>${data.analysisMetadata.totalArticles} items analyzed</div>
-                    </div>
-                </div>
-                ${sourceBreakdownHtml}
+        <div class="text-center">
+            <div class="text-2xl font-bold ${scoreColorClass} mb-4">
+                Controversy Score: ${controversyScore}%
+                <button id="methodologyButton" class="ml-2 text-sm text-gray-500 hover:text-blue-500 font-normal">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    How is this calculated?
+                </button>
             </div>
-        `;
+            
+            <!-- Methodology Explanation (hidden by default) -->
+            <div id="methodologyExplanation" class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-left hidden">
+                <h3 class="font-medium text-gray-800 mb-2">Understanding the Controversy Score</h3>
+                <p class="text-sm text-gray-600 mb-2">
+                    The controversy score is calculated by analyzing multiple factors across several data sources:
+                </p>
+                <ul class="text-sm text-gray-600 list-disc pl-5 mb-2">
+                    <li><strong>Sentiment Analysis:</strong> We measure the variance between positive and negative sentiments across all sources.</li>
+                    <li><strong>Source Variety:</strong> Greater disagreement between sources increases the controversy score.</li>
+                    <li><strong>Volume Analysis:</strong> Higher numbers of conflicting articles/posts indicate more controversy.</li>
+                    <li><strong>Temporal Trends:</strong> Recent spikes in negative or mixed coverage raise the score.</li>
+                </ul>
+                <p class="text-sm text-gray-600 mb-2">
+                    <strong>Score Interpretation:</strong>
+                </p>
+                <ul class="text-sm text-gray-600 list-disc pl-5">
+                    <li><strong>0-25%:</strong> Minimal controversy detected</li>
+                    <li><strong>26-50%:</strong> Moderate controversy present</li>
+                    <li><strong>51-75%:</strong> Significant controversy</li>
+                    <li><strong>76-100%:</strong> Highly controversial subject</li>
+                </ul>
+                <p class="text-sm text-gray-600 mt-2">
+                    Data is collected from ${Object.keys(data.sourceBreakdown || {}).length} sources with 
+                    ${data.analysisMetadata?.totalArticles || 'multiple'} items analyzed during the specified time period.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div class="bg-gray-50 p-3 rounded">
+                    <div class="font-semibold">Analysis Period</div>
+                    <div>${data.searchPeriod.from} to ${data.searchPeriod.to}</div>
+                </div>
+                <div class="bg-gray-50 p-3 rounded">
+                    <div class="font-semibold">Total Items</div>
+                    <div>${data.analysisMetadata.totalArticles} items analyzed</div>
+                </div>
+            </div>
+            ${sourceBreakdownHtml}
+        </div>
+    `;
+
+        // Replace the methodology toggle code with this smoother version
+        setTimeout(() => {
+            const methodologyButton = document.getElementById('methodologyButton');
+            const methodologyExplanation = document.getElementById('methodologyExplanation');
+
+            if (methodologyButton && methodologyExplanation) {
+                methodologyButton.addEventListener('click', () => {
+                    if (methodologyExplanation.classList.contains('hidden')) {
+                        // Show explanation
+                        methodologyExplanation.classList.remove('hidden');
+                        methodologyExplanation.style.maxHeight = '0';
+                        methodologyExplanation.style.opacity = '0';
+
+                        // Trigger reflow for animation
+                        void methodologyExplanation.offsetWidth;
+
+                        // Animate showing
+                        methodologyExplanation.style.maxHeight = methodologyExplanation.scrollHeight + '20px';
+                        methodologyExplanation.style.opacity = '1';
+
+                        // Change button text
+                        methodologyButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                    Hide methodology
+                `;
+
+                        // Track event
+                        if (typeof gtag === 'function') {
+                            gtag('event', 'view_methodology', {
+                                'search_term': searchTerm
+                            });
+                        }
+                    } else {
+                        // Animate hiding
+                        methodologyExplanation.style.maxHeight = '0';
+                        methodologyExplanation.style.opacity = '0';
+
+                        // After animation completes, hide completely
+                        setTimeout(() => {
+                            methodologyExplanation.classList.add('hidden');
+
+                            // Reset button text
+                            methodologyButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        How is this calculated?
+                    `;
+                        }, 300);
+                    }
+                });
+            }
+        }, 0);
 
         // Set status message
         this.statusMessage.innerHTML = `

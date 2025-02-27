@@ -1,7 +1,41 @@
+
+#methodologyExplanation.show {
+    max-height: 1000px;
+    opacity: 1;
+    margin-bottom: 1rem;
+}
+
+#methodologyButton {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: rgba(229, 231, 235, 0.5);
+    transition: all 0.2s ease;
+}
+
+#methodologyButton:hover {
+    background-color: rgba(209, 213, 219, 0.8);
+}
+
+/* Improve animation of show/hide */
+@media (prefers-reduced-motion: no-preference) {
+    #methodologyExplanation {
+        transition: max-height 0.5s ease, opacity 0.3s ease, margin 0.3s ease;
+    }
+}
+
+
 /* Mobile-specific styles */
 
 @media (max-width: 640px) {
     /* Better spacing for source selection */
+    #methodologyButton {
+        display: block;
+        margin: 0.5rem auto;
+        font-size: 0.7rem;
+    }
     .source-checkbox {
         margin-right: 0.5rem;
     }
